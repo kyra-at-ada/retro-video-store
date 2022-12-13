@@ -56,9 +56,12 @@ def validate_page_params(n, p):
 @customers_bp.route("", methods=["GET"])
 def get_all_customers():
     sort_query = request.args.get("sort")
-    per_page, pages = validate_page_params(request.args.get("n"), request.args.get("p"))
+    n = request.args.get("count")
+    p = request.args.get("page_num")
+    n, p = validate_page_params(n, p)
     customer_query = order_customers(sort_query)
-    customer_page = customer_query.paginate(page=pages,per_page=per_page)
+    customer_page = customer_query.paginate(page=p,per_page=n)
+    print("Hello")
     customers = customer_page.items
     customers_response = []
     for customer in customers:
@@ -115,7 +118,7 @@ def handle_one_customer(customer_id):
 def get_videos_from_customer(customer_id):
     customer = validate_model(Customer, customer_id)
     sort_param = request.args.get("sort")
-    per_page, page = validate_page_params(request.args.get("n"), request.args.get("p"))
+    per_page, page = validate_page_params(request.args.get("count"), request.args.get("page_num"))
     videos = order_videos(sort_param).join(Rental).filter_by(customer_id=customer_id).filter_by(checked_in = False)
     video_page = videos.paginate(page = page, per_page = per_page)
     return jsonify([video.to_dict() for video in video_page.items])
@@ -202,7 +205,7 @@ def handle_one_video(video_id):
 def get_customers_from_video(video_id):
     video = validate_model(Video, video_id)
     sort_param = request.args.get("sort")
-    per_page, page = validate_page_params(request.args.get("n"), request.args.get("p"))
+    per_page, page = validate_page_params(request.args.get("count"), request.args.get("page_num"))
     customers = order_customers(sort_param).join(Rental).filter_by(video_id=video_id).filter_by(checked_in = False)
     customer_page = customers.paginate(page = page, per_page = per_page)
     return jsonify([customer.to_dict() for customer in customer_page.items])
