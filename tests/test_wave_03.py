@@ -109,7 +109,7 @@ def test_get_customers_sorted_by_postal_code(client, one_customer, second_custom
 
 def test_paginate_per_page_greater_than_num_customers(client, one_customer):
     # Arrange
-    data = {"n": 5, "p": 1}
+    data = {"count": 5, "page_num": 1}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -126,7 +126,7 @@ def test_paginate_per_page_greater_than_num_customers(client, one_customer):
 
 def test_get_second_page_of_customers(client, one_customer, second_customer):
     # Arrange
-    data = {"n": 1, "p": 2}
+    data = {"count": 1, "page_num": 2}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -143,7 +143,7 @@ def test_get_second_page_of_customers(client, one_customer, second_customer):
     
 def test_get_first_page_of_customers_grouped_by_two(client, one_customer, second_customer, third_customer):
     # Arrange
-    data = {"n": 2, "p": 1}
+    data = {"count": 2, "page_num": 1}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -164,7 +164,7 @@ def test_get_first_page_of_customers_grouped_by_two(client, one_customer, second
 
 def test_get_second_page_of_customers_grouped_by_two(client, one_customer, second_customer, third_customer):
     # Arrange
-    data = {"n": 2, "p": 2}
+    data = {"count": 2, "page_num": 2}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -181,7 +181,7 @@ def test_get_second_page_of_customers_grouped_by_two(client, one_customer, secon
 
 def test_get_customers_no_page(client, one_customer, second_customer, third_customer):
     # Arrange
-    data = {"n": 2}
+    data = {"count": 2}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -202,7 +202,7 @@ def test_get_customers_no_page(client, one_customer, second_customer, third_cust
 
 def test_get_customers_sorted_and_paginated(client, one_customer, second_customer, third_customer):
     # Arrange
-    data = {"n": 2, "sort": "name"}
+    data = {"count": 2, "sort": "name"}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -245,7 +245,7 @@ def test_get_customers_invalid_sort_param(client, one_customer, second_customer)
 
 def test_get_customers_invalid_n_param(client, one_customer, second_customer):
     # Arrange
-    data = {"n": "invalid"}
+    data = {"count": "invalid"}
 
     # Act
     response = client.get("/customers", query_string = data)
@@ -266,7 +266,7 @@ def test_get_customers_invalid_n_param(client, one_customer, second_customer):
 
 def test_get_customers_invalid_p_param(client, one_customer, second_customer):
     # Arrange
-    data = {"p": "invalid"}
+    data = {"page_num": "invalid"}
 
     # Act
     response = client.get("/customers", query_string = data)
