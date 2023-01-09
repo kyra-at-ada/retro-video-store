@@ -1,123 +1,113 @@
-from typer.testing import CliRunner
-from tests.conftest import app_requests_session
-from app.cli.__main__ import cli
-import json
+from app.models.rental import Rental
 
-runner = CliRunner()
 
-def create_one_customer():
-    name= "Jason"
-    postal_code = "12345"
-    phone="4251234234"
+def test_rental_over_due(client, customer_with_overdue):
+    response = client.get("/rentals/overdue")
+    response_body = response.get_json()
 
-    runner.invoke(cli, ["customer", "new", 
-        "--name", name, 
-        "--postal-code", postal_code,
-        "--phone", phone
-        ])
+    assert response.status_code == 200
+    assert response_body[0]["video_id"] == 1
+    assert response_body[0]["title"] == "A Brand New Video"
+    assert response_body[0]["postal_code"] == "12345"
 
-def test_empty_get_customers_list(app_requests_session):
-    #Act
-    output = runner.invoke(cli, ["customer", "list"])
 
-    #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)  
-    assert result["status_code"] == 200
-    assert result["data"] == []
+def test_rental_over_due_no_record(client, one_checked_out_video):
+    response = client.get("/rentals/overdue")
+    response_body = response.get_json()
 
-def test_get_customers_list_with_one_record(app_requests_session):
-    #Arrange
-    create_one_customer()
-    #Act
-    output = runner.invoke(cli, ["customer", "list"])
+    assert response.status_code == 200
+    assert response_body == []
 
-    #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)  
-    assert result["status_code"] == 200
-    assert len(result["data"]) == 1
-    customer_data = result["data"][0]
-    assert customer_data["id"] == 1
-    assert customer_data["name"] == "Jason"
-    assert customer_data["postal_code"] == "12345"
-    assert customer_data["phone"] == "4251234234"
 
-def test_get_customer_one(app_requests_session):
-    #Arrange
-    create_one_customer()
+def test_get_customers_rental_history(client, one_checked_out_video, one_returned_video):
+    # Act
+    response = client.get("/customers/1/history")
+    response_body = response.get_json()
 
-    #Act
-    output = runner.invoke(cli, ["customer", "get", "1"])
+    # Assert
+    assert response.status_code == 200
+    assert len(response_body) == 1
+    assert response_body[0]["title"] == "Video Two"
 
-    #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)  
-    assert result["status_code"] == 200
-    customer_data = result["data"]
-    assert customer_data["id"] == 1
-    assert customer_data["name"] == "Jason"
-    assert customer_data["postal_code"] == "12345"
-    assert customer_data["phone"] == "4251234234"
 
-def test_customer_new_successful(app_requests_session):
-    #Arrange
-    name= "Jason"
-    postal_code = "12345"
-    phone="4251234234" 
-    #Act
-    output = runner.invoke(cli, ["customer", "new", 
-            "--name", name, 
-            "--postal-code", postal_code,
-            "--phone", phone
-            ])
-    #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)
-    assert result["status_code"] == 201
-    assert result["data"]["id"] == 1
+def test_get_customer_not_found_rental_history(client, one_checked_out_video, one_returned_video):
+    # Act
+    response = client.get("/customers/2/history")
+    response_body = response.get_json()
 
-def test_delete_customer_one_successful(app_requests_session):
-    #Arrange
-    create_one_customer()
+    # Assert
+    assert response.status_code == 404
+    assert response_body == {"message": "Customer 2 was not found"}
 
-    #Act
-    output = runner.invoke(cli, ["customer", "delete", "1"])
-    output_test = runner.invoke(cli, ["customer", "list"])
+
+def test_get_invalid_customer_not_found_rental_history(client, one_checked_out_video, one_returned_video):
+    # Act
+    response = client.get("/customers/g/history")
+    response_body = response.get_json()
+
+    # Assert
+    assert response.status_code == 400
+    assert response_body == {"message": "g invalid"}
+
+
+def test_get_customer_no_rental_history(client, one_checked_out_video):
+    # Act
+    response = client.get("/customers/1/history")
+    response_body = response.get_json()
+
+    # Assert
+    assert response.status_code == 200
+    assert len(response_body) == 0
+    assert response_body == []
+
+
+def test_get_customers_rental_history(client, one_checked_out_video, one_returned_video):
+    # Act
+    response = client.get("/customers/1/history")
+    response_body = response.get_json()
 
     #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)
-    assert result["status_code"] == 200
-    assert result["data"]["id"] == 1
-    assert output_test.exit_code == 0
-    result_test = json.loads(output_test.stdout)
-    assert len(result_test["data"]) == 0
+    assert response.status_code == 200
+    assert len(response_body) == 1
+    assert response_body[0]["title"] == "Video Two"
 
-def test_customer_update_successful(app_requests_session):
-    #Arrange
-    create_one_customer()
-    new_name = "Cathy"
-    new_postal_code = "54321"
-    new_phone = "4251111111"
 
-    #Act
-    output = runner.invoke(cli, ["customer", "update", 
-        "--id", "1",
-        "--name", new_name, 
-        "--postal-code", new_postal_code,
-        "--phone", new_phone
-        ])
+def test_get_videos_not_found_rental_history(client, one_checked_out_video):
+    # Act
+    response = client.get("/videos/2/history")
+    response_body = response.get_json()
+
+    # Assert
+    assert response.status_code == 404
+    assert response_body == {"message": "Video 2 was not found"}
+
+
+def test_get_invalid_video_not_found_rental_history(client, one_checked_out_video):
+    # Act
+    response = client.get("/videos/g/history")
+    response_body = response.get_json()
+
+    # Assert
+    assert response.status_code == 400
+    assert response_body == {"message": "g invalid"}
+
+
+def test_get_videos_no_rental_history(client, one_checked_out_video):
+    # Act
+    response = client.get("/videos/1/history")
+    response_body = response.get_json()
+
+    # Assert
+    assert response.status_code == 200
+    assert len(response_body) == 0
+    assert response_body == []
+
+def test_get_videos_rental_history(client, one_checked_out_video, one_returned_video):
+    # Act
+    response = client.get("/videos/2/history")
+    response_body = response.get_json()
+
     #Assert
-    assert output.exit_code == 0
-    result = json.loads(output.stdout)
-    assert result["status_code"] == 200
-    customer_data = result["data"]
-    assert customer_data["name"] == new_name
-    assert customer_data["postal_code"] == new_postal_code
-    
-
-
-
-
-
+    assert response.status_code == 200
+    assert len(response_body) == 1
+    assert response_body[0]["customer_id"] == 1
