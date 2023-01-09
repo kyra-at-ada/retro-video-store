@@ -26,8 +26,8 @@ ARG SUBMISSION_SUBFOLDER
 ADD $SUBMISSION_SUBFOLDER /app
 
 # Add requirements.txt from upstream
-ADD requirements.txt $SUBMISSION_SUBFOLDER
-RUN pip install -r $SUBMISSION_SUBFOLDER/requirements.txt
+ADD requirements.txt /app/$SUBMISSION_SUBFOLDER
+RUN pip install -r /app/$SUBMISSION_SUBFOLDER/requirements.txt
 
 # Overwrite files in student fork with upstream files
 ADD test.sh /app
