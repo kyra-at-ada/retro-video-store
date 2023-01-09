@@ -21,9 +21,9 @@ WORKDIR /app
 # Add to PATH
 ENV PATH /app:$PATH
 
-# Add requirements.txt from upstream
-ADD requirements.txt /app
-RUN pip install -r /app/requirements.txt
+# # Add requirements.txt from upstream
+# ADD requirements.txt /app
+# RUN pip install -r /app/requirements.txt
 
 # Add entire student fork (overwrites previously added package.json)
 ARG SUBMISSION_SUBFOLDER
