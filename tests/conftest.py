@@ -1,161 +1,123 @@
-import pytest
-from app import create_app
-from app.models.video import Video
-from app.models.customer import Customer
-from app import db
-from datetime import datetime
-from flask.signals import request_finished
+from typer.testing import CliRunner
+from tests.conftest import app_requests_session
+from app.cli.__main__ import cli
+import json
 
-VIDEO_TITLE = "A Brand New Video"
-VIDEO_INVENTORY = 1
-VIDEO_RELEASE_DATE = "01-01-2001"
+runner = CliRunner()
 
-CUSTOMER_NAME = "A Brand New Customer"
-CUSTOMER_POSTAL_CODE = "12345"
-CUSTOMER_PHONE = "123-123-1234"
+def create_one_customer():
+    name= "Jason"
+    postal_code = "12345"
+    phone="4251234234"
 
-@pytest.fixture
-def app():
-    app = create_app({"TESTING": True})
+    runner.invoke(cli, ["customer", "new", 
+        "--name", name, 
+        "--postal-code", postal_code,
+        "--phone", phone
+        ])
 
-    @request_finished.connect_via(app)
-    def expire_session(sender, response, **extra):
-        db.session.remove()
+def test_empty_get_customers_list(app_requests_session):
+    #Act
+    output = runner.invoke(cli, ["customer", "list"])
 
-    with app.app_context():
-        db.create_all()
-        yield app
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)  
+    assert result["status_code"] == 200
+    assert result["data"] == []
 
-    with app.app_context():
-        db.drop_all()
+def test_get_customers_list_with_one_record(app_requests_session):
+    #Arrange
+    create_one_customer()
+    #Act
+    output = runner.invoke(cli, ["customer", "list"])
+
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)  
+    assert result["status_code"] == 200
+    assert len(result["data"]) == 1
+    customer_data = result["data"][0]
+    assert customer_data["id"] == 1
+    assert customer_data["name"] == "Jason"
+    assert customer_data["postal_code"] == "12345"
+    assert customer_data["phone"] == "4251234234"
+
+def test_get_customer_one(app_requests_session):
+    #Arrange
+    create_one_customer()
+
+    #Act
+    output = runner.invoke(cli, ["customer", "get", "1"])
+
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)  
+    assert result["status_code"] == 200
+    customer_data = result["data"]
+    assert customer_data["id"] == 1
+    assert customer_data["name"] == "Jason"
+    assert customer_data["postal_code"] == "12345"
+    assert customer_data["phone"] == "4251234234"
+
+def test_customer_new_successful(app_requests_session):
+    #Arrange
+    name= "Jason"
+    postal_code = "12345"
+    phone="4251234234" 
+    #Act
+    output = runner.invoke(cli, ["customer", "new", 
+            "--name", name, 
+            "--postal-code", postal_code,
+            "--phone", phone
+            ])
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)
+    assert result["status_code"] == 201
+    assert result["data"]["id"] == 1
+
+def test_delete_customer_one_successful(app_requests_session):
+    #Arrange
+    create_one_customer()
+
+    #Act
+    output = runner.invoke(cli, ["customer", "delete", "1"])
+    output_test = runner.invoke(cli, ["customer", "list"])
+
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)
+    assert result["status_code"] == 200
+    assert result["data"]["id"] == 1
+    assert output_test.exit_code == 0
+    result_test = json.loads(output_test.stdout)
+    assert len(result_test["data"]) == 0
+
+def test_customer_update_successful(app_requests_session):
+    #Arrange
+    create_one_customer()
+    new_name = "Cathy"
+    new_postal_code = "54321"
+    new_phone = "4251111111"
+
+    #Act
+    output = runner.invoke(cli, ["customer", "update", 
+        "--id", "1",
+        "--name", new_name, 
+        "--postal-code", new_postal_code,
+        "--phone", new_phone
+        ])
+    #Assert
+    assert output.exit_code == 0
+    result = json.loads(output.stdout)
+    assert result["status_code"] == 200
+    customer_data = result["data"]
+    assert customer_data["name"] == new_name
+    assert customer_data["postal_code"] == new_postal_code
+    
 
 
-@pytest.fixture
-def client(app):
-    return app.test_client()
 
-@pytest.fixture
-def one_video(app):
-    new_video = Video(
-        title=VIDEO_TITLE, 
-        release_date=VIDEO_RELEASE_DATE,
-        total_inventory=VIDEO_INVENTORY,
-        )
-    db.session.add(new_video)
-    db.session.commit()
-
-@pytest.fixture
-def second_video(app):
-    new_video = Video(
-        title="Video Two", 
-        release_date="12-31-2000",
-        total_inventory=1,
-        )
-    db.session.add(new_video)
-    db.session.commit()
-
-@pytest.fixture
-def third_video(app):
-    new_video = Video(
-        title="Video Three", 
-        release_date="01-02-2001",
-        total_inventory=1,
-        )
-    db.session.add(new_video)
-    db.session.commit()
-
-@pytest.fixture
-def five_copies_video(app):
-    new_video = Video(
-        title=VIDEO_TITLE, 
-        release_date=VIDEO_RELEASE_DATE,
-        total_inventory=5,
-        )
-    db.session.add(new_video)
-    db.session.commit()
-
-@pytest.fixture
-def one_customer(app):
-    new_customer = Customer(
-        name=CUSTOMER_NAME,
-        postal_code=CUSTOMER_POSTAL_CODE,
-        phone=CUSTOMER_PHONE
-    )
-    db.session.add(new_customer)
-    db.session.commit()
-
-@pytest.fixture
-def second_customer(app):
-    new_customer = Customer(
-        name="Second Customer",
-        postal_code="12345",
-        phone="234-234-2345"
-    )
-    db.session.add(new_customer)
-    db.session.commit()
-
-@pytest.fixture
-def third_customer(app):
-    new_customer = Customer(
-        name="Customer Three",
-        postal_code= "12344",
-        phone="000-000-0000"
-    )
-    db.session.add(new_customer)
-    db.session.commit()
-
-@pytest.fixture
-def one_checked_out_video(app, client, one_customer, one_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 1,
-        "video_id": 1
-    })
-
-@pytest.fixture
-def second_checked_out_video(app, client, one_customer, second_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 1,
-        "video_id": 2
-    })
-
-@pytest.fixture
-def third_checked_out_video(app, client, one_customer, third_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 1,
-        "video_id": 3
-    })
-
-@pytest.fixture
-def one_returned_video(app, client, one_customer, second_video):
-    client.post("/rentals/check-out", json={
-        "customer_id": 1,
-        "video_id": 2
-    })
-
-    response = client.post("/rentals/check-in", json = {
-        "customer_id": 1,
-        "video_id": 2
-    })
-
-@pytest.fixture
-def customer_one_video_three(app, client, one_customer, three_copies_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 1,
-        "video_id": 1
-    })
-
-@pytest.fixture
-def customer_two_video_three(app, client, second_customer, three_copies_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 2,
-        "video_id": 1
-    })
-
-@pytest.fixture
-def customer_three_video_three(app, client, third_customer, three_copies_video):
-    response = client.post("/rentals/check-out", json={
-        "customer_id": 3,
-        "video_id": 1
-    })
 
 
