@@ -21,12 +21,13 @@ WORKDIR /app
 # Add to PATH
 ENV PATH /app:$PATH
 
+# Add requirements.txt from upstream
+RUN pip install -r /app/requirements.txt
+
 # Add entire student fork (overwrites previously added package.json)
 ARG SUBMISSION_SUBFOLDER
 ADD $SUBMISSION_SUBFOLDER /app
 
-# Add requirements.txt from upstream
-RUN pip install -r /app/requirements.txt
 
 # Overwrite files in student fork with upstream files
 ADD test.sh /app
